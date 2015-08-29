@@ -289,11 +289,11 @@ class PPM
             $pages_count = 1;
         }
 
-        $this->logger->write('Found '.$pages_count. ' pages');
+        $this->logger->write('Found ' . $pages_count . ' pages');
 
         for ($p = 1; $p <= $pages_count; $p++) {
 
-            $this->logger->write('Page '.$p);
+            $this->logger->write('Page ' . $p);
 
             if ($p > 1) {
                 $page_url = $this->factory->getRouter()->getHistoryScouting($p);
@@ -588,27 +588,38 @@ class PPM
 
         $text = $this->downloader->get($url);
 
-        if(strpos($text, 'modalInputChallenge') === false){
+        if (strpos($text, 'modalInputChallenge') === false) {
             $this->reauth();
             $text = $this->downloader->get($url);
         }
 
-        $teams = [];
         $my_games = $free_games = 0;
-
-
-        if(preg_match_all("#class='modalInputChallenge(\d+)#si", $text, $teams)){
-            $teams = $teams[1];
-        }
-
         preg_match("#Free challenges: \d+/(\d+)#si", $text, $free_games);
         $free_games = $free_games[1];
 
         preg_match("#Daily limit: (\d+)#si", $text, $my_games);
         $my_games = $my_games[1];
 
+        $text = $this->downloader->get($this->factory->getRouter()->getFastGames('day'));
+
+        $teams = [];
+
+        if (preg_match("#<table cellspacing='0' cellpadding='0' class='table' id='table-1'>.+?<tbody>(.+?)</tbody>#si", $text, $text)) {
+            $text = $text[1];
+            if (preg_match_all('#<tr.*?>(.+?)</tr>#si', $text, $rows)) {
+                foreach ($rows[1] as $row) {
+                    if (preg_match("#<td>(\d+)</td><td><a\s*rel='\#yesnoChallenge(\d+)'#si", $row, $team_data)) {
+                        $teams[] = [
+                            'id' => $team_data[2],
+                            'strength' => $team_data[1]
+                        ];
+                    }
+                }
+            }
+        }
+
         return [
-            'team_ids' => $teams,
+            'teams' => $teams,
             'games_played' => $my_games,
             'free_games' => $free_games
         ];

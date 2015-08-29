@@ -57,8 +57,8 @@ abstract class Router
         return $this->getUrl('player-market.html' . ($search_id ? '?data=' . $page . '-' . $search_id : ''));
     }
 
-    public function getFastGames(){
-        return $this->getUrl('instant-challenges.html?data=rivals');
+    public function getFastGames($page = 'rivals'){
+        return $this->getUrl('instant-challenges.html?data='.$page);
     }
 
     public function playFastGame($team_id){
