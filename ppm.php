@@ -275,8 +275,8 @@ class PPM
     /** @return Player[] */
     public function getScoutedPlayers()
     {
-		$this->logger->write('Start search scouted players');
-		
+        $this->logger->write('Start search scouted players');
+
         $result = array();
 
         $page_url = $this->factory->getRouter()->getHistoryScouting();
@@ -290,11 +290,11 @@ class PPM
         }
 
         $this->logger->write('Found '.$pages_count. ' pages');
-		
+
         for ($p = 1; $p <= $pages_count; $p++) {
-				
-			$this->logger->write('Page '.$p);
-			
+
+            $this->logger->write('Page '.$p);
+
             if ($p > 1) {
                 $page_url = $this->factory->getRouter()->getHistoryScouting($p);
                 $page = $this->downloader->get($page_url);
