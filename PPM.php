@@ -101,6 +101,16 @@ class PPM
 
     public function selectSport($sport)
     {
+        if ($sport == 'soccer' || $sport == 'football') {
+            $sport = self::SPORT_SOCCER;
+        } elseif ($sport == 'hockey') {
+            $sport = self::SPORT_HOCKEY;
+        } elseif ($sport == 'handball') {
+            $sport = self::SPORT_HANDBALL;
+        } elseif ($sport == 'basketball') {
+            $sport = self::SPORT_BASKETBALL;
+        }
+
         $this->sport = $sport;
 
         if ($this->sport == self::SPORT_SOCCER) {
