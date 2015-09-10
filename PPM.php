@@ -428,7 +428,7 @@ class PPM
     }
 
 
-    public function autoBid(Player $player, $amount)
+    public function autoBid(Player $player, $amount, $finishCallback)
     {
         $this->logger->write('Start autobid');
 
@@ -437,6 +437,9 @@ class PPM
 
             if ($player->on_market == false) {
                 $this->logger->write('Player is no sold');
+                if ($finishCallback) {
+                    call_user_func($finishCallback);
+                }
                 break;
             }
 
@@ -455,7 +458,10 @@ class PPM
 
                 if ($new_bid > $amount) {
                     $this->logger->write("Next bid is more than limit: FAIL");
-                    return false;
+                    if ($finishCallback) {
+                        call_user_func($finishCallback);
+                    }
+                    break;
                 }
 
                 $this->logger->write('Bid: ' . $new_bid);
