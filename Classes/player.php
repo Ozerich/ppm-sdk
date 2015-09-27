@@ -44,7 +44,7 @@ abstract class Player
             $this->team = new HockeyTeam();
         } elseif ($this instanceof HandballPlayer) {
             $this->team = new HandballTeam();
-        } elseif($this instanceof BasketballPlayer) {
+        } elseif ($this instanceof BasketballPlayer) {
             $this->team = new BasketballTeam();
         }
 
@@ -58,6 +58,8 @@ abstract class Player
     public $age;
 
     public $career;
+
+    public $is_scouted_queue;
 
     private $scouted = false;
 

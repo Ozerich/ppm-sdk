@@ -247,6 +247,7 @@ class PPM
             }
         }
 
+        $model->is_scouted_queue = strpos($page, 'The player is placed in the queue for scouting.') !== false;
 
         if (preg_match("#<div class='player_info'>.+?<a.*?data=(.+?)'.*?<a.*?>.+?</a>.*?<a.*?data=(\d+).*?>(.+?)</a>.*?<a.*?>(.+?)</a>.*?#si", $page, $team_preg)) {
             $team = $model->createTeam();
