@@ -662,7 +662,7 @@ class PPM
             return 0;
         }
 
-        return 30 - substr_count($page[0], '<tr>');
+        return 30 - substr_count($page[1], '<tr>');
     }
 
     public function scoutPlayer($player_id)
