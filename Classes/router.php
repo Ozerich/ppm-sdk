@@ -124,7 +124,7 @@ class HandballRouter extends Router
 
     public function scoutPlayer($player_id)
     {
-        return $this->getUrl('_action/action_player.php?action=scouting_player&id=' . $player_id);
+        return $this->getUrl('_action/action_player.php?action=scouting_player&id=' . $player_id, false);
     }
 }
 
