@@ -650,4 +650,23 @@ class PPM
             'tactics' => 1
         ]);
     }
+
+    public function getAvailableCountForScouting()
+    {
+        $url = $this->factory->getRouter()->scoutingPage();
+
+        $page = $this->downloader->get($url);
+
+        if (!preg_match("#id='table-1.+?<tbody>(.+?)</table>#si", $page, $page)) {
+            return 0;
+        }
+
+        return 30 - substr_count($page[0], '<tr>');
+    }
+
+    public function scoutPlayer($player_id)
+    {
+        $this->downloader->get($this->factory->getRouter()->getPlayer($player_id));
+        $this->downloader->get($this->factory->getRouter()->scoutPlayer($player_id));
+    }
 }

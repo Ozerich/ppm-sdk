@@ -32,7 +32,6 @@ class Downloader
             curl_setopt($this->curl, CURLOPT_COOKIE, $this->cookie);
         }
 
-
         $result = curl_exec($this->curl);
 
         return $result;

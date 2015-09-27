@@ -57,12 +57,24 @@ abstract class Router
         return $this->getUrl('player-market.html' . ($search_id ? '?data=' . $page . '-' . $search_id : ''));
     }
 
-    public function getFastGames($page = 'rivals'){
-        return $this->getUrl('instant-challenges.html?data='.$page);
+    public function getFastGames($page = 'rivals')
+    {
+        return $this->getUrl('instant-challenges.html?data=' . $page);
     }
 
-    public function playFastGame($team_id){
-        return $this->getUrl('_action/action_team.php?action=instantChallenge&id_team='.$team_id, false);
+    public function playFastGame($team_id)
+    {
+        return $this->getUrl('_action/action_team.php?action=instantChallenge&id_team=' . $team_id, false);
+    }
+
+    public function scoutPlayer($player_id)
+    {
+        return $this->getUrl('_action/action_player.php?action=60&id=' . $player_id, false);
+    }
+
+    public function scoutingPage()
+    {
+        return $this->getUrl('scouting.html');
     }
 }
 
@@ -108,6 +120,11 @@ class HandballRouter extends Router
     public function getBid($player_id)
     {
         return $this->getUrl('_action/action_person.php?action=add_market_person_offer&id=' . $player_id . '&type=player', false);
+    }
+
+    public function scoutPlayer($player_id)
+    {
+        return $this->getUrl('/_action/action_player.php?action=scouting_player&id=' . $player_id);
     }
 }
 
