@@ -659,7 +659,7 @@ class PPM
         $page = $this->downloader->get($url);
 
         if (!preg_match("#id='table-1.+?<tbody>(.+?)</table>#si", $page, $page)) {
-            return 0;
+            return 30;
         }
 
         return 30 - substr_count($page[1], '<tr>');
