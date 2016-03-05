@@ -4,12 +4,30 @@ namespace ppm;
 
 abstract class Factory
 {
+    abstract protected function getSport();
+
     abstract protected function createRouter();
 
     abstract protected function createPlayer();
 
     /** @var  Router */
     private $router;
+
+
+    public static function GetFactory($sport)
+    {
+        if ($sport == PPM::SPORT_BASKETBALL) {
+            return new BasketballFactory();
+        } elseif ($sport == PPM::SPORT_HOCKEY) {
+            return new HockeyFactory();
+        } elseif ($sport == PPM::SPORT_SOCCER) {
+            return new SoccerFactory();
+        } elseif ($sport == PPM::SPORT_HANDBALL) {
+            return new HandballFactory();
+        }
+
+        return null;
+    }
 
     /** @return Router */
     public function getRouter()
@@ -25,10 +43,21 @@ abstract class Factory
     {
         return $this->createPlayer();
     }
+
+    /** @return Staff */
+    public function getStaff()
+    {
+        return new Staff($this->getSport());
+    }
 }
 
 class HockeyFactory extends Factory
 {
+    protected function getSport()
+    {
+        return PPM::SPORT_HOCKEY;
+    }
+
     protected function createRouter()
     {
         return new HockeyRouter();
@@ -42,6 +71,11 @@ class HockeyFactory extends Factory
 
 class SoccerFactory extends Factory
 {
+    protected function getSport()
+    {
+        return PPM::SPORT_SOCCER;
+    }
+
     protected function createRouter()
     {
         return new SoccerRouter();
@@ -55,6 +89,11 @@ class SoccerFactory extends Factory
 
 class HandballFactory extends Factory
 {
+    protected function getSport()
+    {
+        return PPM::SPORT_HANDBALL;
+    }
+
     protected function createRouter()
     {
         return new HandballRouter();
@@ -68,6 +107,11 @@ class HandballFactory extends Factory
 
 class BasketballFactory extends Factory
 {
+    protected function getSport()
+    {
+        return PPM::SPORT_BASKETBALL;
+    }
+
     protected function createRouter()
     {
         return new BasketballRouter();

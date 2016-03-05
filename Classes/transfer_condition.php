@@ -59,11 +59,19 @@ class TransferSkillRange extends TransferRange
     }
 }
 
-class TransferCondition
+
+class BaseTransferCondition
 {
     /** @var TransferRange */
     public $age;
 
+    /** @var TransferRange */
+    public $price;
+
+}
+
+class TransferCondition extends BaseTransferCondition
+{
     /** @var TransferRange */
     public $career;
 
@@ -76,19 +84,27 @@ class TransferCondition
     /** @var TransferRange */
     public $pkvs;
 
-    /** @var TransferRange */
-    public $price;
-
     /** @var TransferSkillRange[] */
     public $skills;
-
 
     public function __construct()
     {
         $this->skills = [];
 
-        for($i = 0; $i <= 10; $i++){
+        for ($i = 0; $i <= 10; $i++) {
             $this->skills[$i] = new TransferSkillRange();
         }
     }
+}
+
+class StaffTransferCondition extends BaseTransferCondition
+{
+    /** @var TransferRange */
+    public $skill_1;
+
+    /** @var TransferRange */
+    public $skill_2;
+
+    /** @var integer */
+    public $role;
 }

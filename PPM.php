@@ -7,7 +7,9 @@ require_once "Classes/downloader.php";
 require_once "Classes/router.php";
 require_once "Classes/position.php";
 require_once "Classes/team.php";
+require_once "Classes/person.php";
 require_once "Classes/player.php";
+require_once "Classes/staff.php";
 require_once "Classes/factory.php";
 require_once "Classes/transfer_condition.php";
 
@@ -113,17 +115,7 @@ class PPM
 
         $this->sport = $sport;
 
-        if ($this->sport == self::SPORT_SOCCER) {
-            $this->factory = new SoccerFactory();
-        } elseif ($this->sport == self::SPORT_HOCKEY) {
-            $this->factory = new HockeyFactory();
-        } elseif ($this->sport == self::SPORT_HANDBALL) {
-            $this->factory = new HandballFactory();
-        } elseif ($this->sport == self::SPORT_BASKETBALL) {
-            $this->factory = new BasketballFactory;
-        } else {
-            throw new \Exception("Incorrect sport");
-        }
+        $this->factory = Factory::GetFactory($this->sport);
     }
 
 
@@ -283,6 +275,68 @@ class PPM
         return $model;
     }
 
+    /** @return Player */
+    public function getStaff($staff_id)
+    {
+        $page_url = $this->factory->getRouter()->getStaff($staff_id);
+        $page = $this->downloader->get($page_url);
+
+        if (!preg_match("#<div class='top_info_menu'(.+?)</div>#si", $page, $login) || strpos($login[1], $this->login) !== false) {
+            $this->reauth();
+            $page = $this->downloader->get($page_url);
+        }
+
+        $model = $this->factory->getStaff();
+
+        $model->id = $staff_id;
+        if (preg_match("#<title>(.+?)- Staff#si", $page, $name)) {
+            $model->name = trim($name[1]);
+        }
+
+        if (preg_match("#<strong>Age</strong>.+?<td.*?>(.+?)</td>#si", $page, $age)) {
+            $model->age = $age[1];
+        }
+
+        $role_labels = Staff::GetRoleLabels();
+
+        if (preg_match("#<div class='h1_add_info'>.+?<div class='h1_add_info'>(.+?)</div>#si", $page, $role)) {
+            $role = $role[1];
+            if (isset($role_labels[$role])) {
+                $model->role = $role_labels[$role];
+            }
+        }
+
+        if (preg_match('#Miscellaneous info(.+?)</table>#si', $page, $skills_text)) {
+            $skills_text = $skills_text[1];
+            if (preg_match_all('#<td.*?>(.+?)</td>#si', $skills_text, $skills)) {
+                $skills = $skills[1];
+                $model->setSkill(0, $skills[1], strip_tags($skills[2]));
+                $model->setSkill(1, $skills[7], strip_tags($skills[8]));
+            }
+        }
+
+
+        if (strpos($page, 'The staff member is on the market') !== false && strpos($page, 'The bidding deadline has passed.') == false) {
+            $model->on_market = true;
+
+            preg_match('#table_profile(.+?)</table>#si', $page, $table);
+            preg_match_all("#<td class='tr\dtd2.+?>(.+?)</td>#si", $table[1], $cells);
+
+            preg_match("#value='(\d+)'#si", $cells[1][1], $seconds);
+            $model->deadline_seconds = $seconds[1];
+
+            if (isset($cells[1][2])) {
+                $model->sell_price = (int)str_replace(',', '', $cells[1][2]);
+            }
+
+            if (strpos($page, 'disabled') !== false) {
+                $model->is_my_last_bid = true;
+            }
+        }
+
+        return $model;
+    }
+
     /** @return Player[] */
     public function getScoutedPlayers()
     {
@@ -395,10 +449,17 @@ class PPM
     }
 
 
-    public function bid(Player $player, $amount)
+    public function bid(Person $player, $amount)
     {
-        $url = $this->factory->getRouter()->getBid($player->id);
-        $player_url = $this->factory->getRouter()->getPlayer($player->id);
+        if ($player instanceof Player) {
+            $url = $this->factory->getRouter()->getBid($player->id);
+            $player_url = $this->factory->getRouter()->getPlayer($player->id);
+        } elseif ($player instanceof Staff) {
+            $url = $this->factory->getRouter()->getStaffBid($player->id);
+            $player_url = $this->factory->getRouter()->getStaff($player->id);
+        } else {
+            throw new \InvalidArgumentException();
+        }
 
         $response = $this->downloader->post($url, [
             'send' => '',
@@ -406,6 +467,7 @@ class PPM
             'price' => $amount,
             'return_page' => $player_url,
         ]);
+
         $bid_label = null;
         foreach (['id_item', 'id_transfer'] as $bid_id_label) {
             if (preg_match("#name='" . $bid_id_label . "' value='(\d+?)'#si", $response, $id)) {
@@ -415,8 +477,7 @@ class PPM
             }
         }
 
-
-        if ($bid_label) {
+        if ($bid_label && $bid_id) {
             $this->downloader->post($url, [
                 'check_yes' => '',
                 $bid_label => $bid_id,
@@ -429,33 +490,33 @@ class PPM
     }
 
 
-    public function autoBid(Player $player, $amount, $finishCallback)
+    public function autoBid(Person $player, $amount, $finishCallback)
     {
         $this->logger->write('Start autobid');
 
         while (true) {
-            $player = $this->getPlayer($player->id);
+            $person = $player instanceof Player ? $this->getPlayer($player->id) : $this->getStaff($player->id);
 
-            if ($player->on_market == false) {
-                $this->logger->write('Player is no sold');
+            if ($person->on_market == false) {
+                $this->logger->write('Person is no sold');
                 if ($finishCallback) {
                     call_user_func($finishCallback);
                 }
                 break;
             }
 
-            $this->logger->write($player->deadline_seconds . ' -> ' . $player->sell_price);
+            $this->logger->write($person->deadline_seconds . ' -> ' . $person->sell_price);
 
-            if ($player->is_my_last_bid) {
+            if ($person->is_my_last_bid) {
                 $this->logger->write('MY BID');
-                sleep($player->deadline_seconds > 70 ? $player->deadline_seconds - 70 : 5);
+                sleep($person->deadline_seconds > 70 ? $person->deadline_seconds - 70 : 5);
                 continue;
             }
 
-            if ($player->is_my_last_bid == false && ($player->deadline_seconds <= 5 || ($player->deadline_seconds >= 61 && $player->deadline_seconds <= 63))) {
+            if ($person->is_my_last_bid == false && ($person->deadline_seconds <= 5 || ($person->deadline_seconds >= 61 && $person->deadline_seconds <= 63))) {
 
-                $bid_delta = max(10000, ceil($player->sell_price / 100 * 5));
-                $new_bid = $player->sell_price + $bid_delta;
+                $bid_delta = max(10000, ceil($person->sell_price / 100 * 5));
+                $new_bid = $person->sell_price + $bid_delta;
 
                 if ($new_bid > $amount) {
                     $this->logger->write("Next bid is more than limit: FAIL");
@@ -467,10 +528,10 @@ class PPM
 
                 $this->logger->write('Bid: ' . $new_bid);
 
-                $this->bid($player, $new_bid);
+                $this->bid($person, $new_bid);
                 sleep(59);
             } else {
-                $waiting_seconds = $player->deadline_seconds > 60 ? $player->deadline_seconds - 63 : $player->deadline_seconds - 3;
+                $waiting_seconds = $person->deadline_seconds > 60 ? $person->deadline_seconds - 63 : $person->deadline_seconds - 3;
                 $waiting_seconds = max($waiting_seconds, 0);
                 $this->logger->write('Waiting: ' . $waiting_seconds);
                 sleep($waiting_seconds);
@@ -481,7 +542,6 @@ class PPM
 
     public function getTransfers(TransferCondition $condition)
     {
-
         $params = [
             'action' => 'save_filter',
             'submit' => '',
@@ -520,7 +580,6 @@ class PPM
                 }
             }
         }
-
 
         $result = [];
 
@@ -588,6 +647,92 @@ class PPM
                         }
 
                         $result[] = $player;
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+
+        return $result;
+    }
+
+
+    public function getStaffTransfers(StaffTransferCondition $condition)
+    {
+        $params = [
+            'country' => 'first',
+            'type' => $condition->role,
+        ];
+
+        foreach (['price', 'age', 'contract', 'salary', 'totally_quality', 'index_skill', 'attrib1', 'attrib2', 'qua_attrib1', 'qua_attrib2'] as $param) {
+            $params[$param . '_from'] = '';
+            $params[$param . '_to'] = '';
+        }
+
+        if ($condition->price) {
+            $params = array_merge($params, $condition->price->getRange('price'));
+        }
+        if ($condition->age) {
+            $params = array_merge($params, $condition->age->getRange('age'));
+        }
+        if ($condition->skill_1) {
+            $params = array_merge($params, $condition->skill_1->getRange($this->sport == self::SPORT_HANDBALL ? 'attribute_1' : 'attrib1'));
+        }
+        if ($condition->skill_2) {
+            $params = array_merge($params, $condition->skill_2->getRange($this->sport == self::SPORT_HANDBALL ? 'attribute_2' : 'attrib2'));
+        }
+
+        $params = array_merge($params, [
+            'action' => 'save_filter',
+            'submit' => '',
+            'name_filter' => ''
+        ]);
+
+        $result = [];
+        $search_id = null;
+        for ($page = 1; $page <= 50; $page++) {
+            $url = $this->factory->getRouter()->getStaffTransfers($page, $search_id);
+
+            $text = $page == 1 ? $this->downloader->post($url, $params) : $this->downloader->get($url);
+
+            preg_match("#<div class='pagination'>.*?data\=\d\-(\d+)#sui", $text, $search_id);
+            $search_id = $search_id[1];
+
+            preg_match("#id='table-1'.*?>.+?tbody>(.+?)</tbody>#sui", $text, $text);
+            $text = $text[1];
+            if (preg_match_all('#<tr.*?>(.+?)</tr>#sui', $text, $rows)) {
+                foreach ($rows[1] as $row) {
+                    if (preg_match_all('#<td.*?>(.+?)</td>#sui', $row, $cells)) {
+                        $cells = $cells[1];
+
+                        $model = $this->factory->getStaff();
+
+                        if (preg_match("#value\='(\d+)'#sui", $cells[0], $seconds)) {
+                            $model->deadline_seconds = $seconds[1];
+                        } elseif (preg_match('#\d\d\d\d\-\d\d\-\d\d\s\d\d\:\d\d\:\d\d#sui', $cells[0], $time)) {
+                            $model->deadline_seconds = strtotime($time[0]) - time();
+                        }
+
+                        preg_match('#\?data\=(\d+)#sui', $cells[0], $id);
+                        $model->id = $id[1];
+
+                        preg_match_all('#<a.*?>(.+?)</a>#sui', $cells[0], $name);
+                        $model->name = $name[1][1];
+
+                        $model->role = $condition->role;
+                        $model->age = $cells[2];
+
+                        $skill = explode("<span class='kva'>", $cells[6]);
+                        $model->setSkill(0, (int)$skill[0], (int)$skill[1]);
+
+                        $skill = explode("<span class='kva'>", $cells[7]);
+                        $model->setSkill(1, (int)$skill[0], (int)$skill[1]);
+
+                        $model->on_market = 1;
+                        $model->sell_price = preg_replace('#[^\d]+#sui', '', $cells[1]);
+
+                        $result[] = $model;
                     }
                 }
             } else {

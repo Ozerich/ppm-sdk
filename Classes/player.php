@@ -2,39 +2,36 @@
 
 namespace ppm;
 
-abstract class Player
+abstract class Player extends Person
 {
     const SIDE_LEFT = 'l';
     const SIDE_RIGHT = 'r';
     const SIDE_UNIVERSAL = 'u';
-
-    abstract function getSkillsCount();
 
     /** @return Position */
     abstract public function getPosition();
 
     abstract function getSkillLabels();
 
-    public $id;
-
-    public $name;
-
     public $experience;
 
     public $prefer_side;
 
-
-    public $on_market = false;
-
-    public $sell_price;
-
-    public $deadline_seconds;
-
-    public $is_my_last_bid;
-
-
     /** @var Team */
     public $team;
+
+    public $national_team = false;
+
+    public $national_team_work = 0;
+
+    public $career;
+
+    public $is_scouted_queue;
+
+    private $scouted = false;
+
+    /** @var  Position */
+    private $position;
 
     public function createTeam()
     {
@@ -51,39 +48,9 @@ abstract class Player
         return $this->team;
     }
 
-    public $national_team = false;
-
-    public $national_team_work = 0;
-
-    public $age;
-
-    public $career;
-
-    public $is_scouted_queue;
-
-    private $scouted = false;
-
-    private $skills = null;
-
-    /** @var  Position */
-    private $position;
-
-    public function __construct()
-    {
-        $skills_count = $this->getSkillsCount();
-
-        for ($i = 0; $i < $skills_count; $i++) {
-            $this->skills[] = [null, null];
-        }
-    }
-
     public function setSkill($skill_id, $skill_value, $skill_quality)
     {
-        if (!isset($this->skills[$skill_id])) {
-            throw new \Exception("Incorrect skill_id");
-        }
-
-        $this->skills[$skill_id] = [(int)$skill_value, (int)$skill_quality];
+        parent::setSkill($skill_id, $skill_value, $skill_quality);
 
         if ($this->position) {
             $this->position = null;
@@ -92,26 +59,10 @@ abstract class Player
         $this->scouted = true;
     }
 
-    public function getSkill($skill_id)
-    {
-        return isset($this->skills[$skill_id]) ? $this->skills[$skill_id][0] : null;
-    }
-
-    public function getSkillQuality($skill_id)
-    {
-        return isset($this->skills[$skill_id]) ? $this->skills[$skill_id][1] : null;
-    }
-
-    public function getSkills()
-    {
-        return $this->skills;
-    }
-
     public function isScouted()
     {
         return $this->scouted;
     }
-
 
     public function getUrl()
     {
@@ -126,18 +77,6 @@ abstract class Player
         }
 
         return $router->getPlayer($this->id);
-    }
-
-
-    public function getOr()
-    {
-        $result = 0;
-
-        foreach ($this->skills as $skill) {
-            $result += $skill[0];
-        }
-
-        return $result;
     }
 
     public function getUsefulOr($calc_exp = false)
@@ -171,7 +110,6 @@ abstract class Player
 
         return floor($result);
     }
-
 
     public function getUsefulQuality()
     {

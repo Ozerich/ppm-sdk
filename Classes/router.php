@@ -21,6 +21,11 @@ abstract class Router
         return $this->getUrl('player.html?data=' . $id);
     }
 
+    public function getStaff($id)
+    {
+        return $this->getUrl('staff-member.html?data=' . $id);
+    }
+
     public function getCountryProfile()
     {
         return $this->getUrl('country-profile.html');
@@ -52,9 +57,19 @@ abstract class Router
         return $this->getUrl('_action/action_player.php?action=12&id=' . $player_id, false);
     }
 
+    public function getStaffBid($staff_id)
+    {
+        return $this->getUrl('_action/action_employee.php?action=12&id=' . $staff_id . '&return_page=' . $this->getStaff($staff_id), false);
+    }
+
     public function getTransfers($page = 1, $search_id = null)
     {
         return $this->getUrl('player-market.html' . ($search_id ? '?data=' . $page . '-' . $search_id : ''));
+    }
+
+    public function getStaffTransfers($page = 1, $search_id = null)
+    {
+        return $this->getUrl('staff-market.html' . ($search_id ? '?data=' . $page . '-' . $search_id : ''));
     }
 
     public function getFastGames($page = 'rivals')
@@ -138,6 +153,11 @@ class BasketballRouter extends Router
     public function getPlayer($id)
     {
         return $this->getUrl('player-profile.html?data=' . $id);
+    }
+
+    public function getStaff($id)
+    {
+        return $this->getUrl('employee.html?data=' . $id);
     }
 
     public function getBid($player_id)

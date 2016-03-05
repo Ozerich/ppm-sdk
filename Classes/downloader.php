@@ -37,17 +37,20 @@ class Downloader
         return $result;
     }
 
-
     public function post($url, $params = array(), $load_cookie = false)
     {
         curl_setopt($this->curl, CURLOPT_URL, $url);
         curl_setopt($this->curl, CURLOPT_POST, false);
+        curl_setopt($this->curl, CURLOPT_FOLLOWLOCATION, 1);
         curl_setopt($this->curl, CURLOPT_POSTFIELDS, http_build_query($params));
-
 
         if ($load_cookie) {
             curl_setopt($this->curl, CURLOPT_COOKIE, null);
             curl_setopt($this->curl, CURLOPT_HEADER, 1);
+        } else {
+            if ($this->cookie) {
+                curl_setopt($this->curl, CURLOPT_COOKIE, $this->cookie);
+            }
         }
 
         $result = curl_exec($this->curl);
