@@ -499,9 +499,11 @@ class PPM
 
             if ($person->on_market == false) {
                 $this->logger->write('Person is no sold');
+
                 if ($finishCallback) {
-                    call_user_func($finishCallback);
+                    call_user_func($finishCallback, $person->is_my_last_bid);
                 }
+
                 break;
             }
 
@@ -521,7 +523,7 @@ class PPM
                 if ($new_bid > $amount) {
                     $this->logger->write("Next bid is more than limit: FAIL");
                     if ($finishCallback) {
-                        call_user_func($finishCallback);
+                        call_user_func($finishCallback, false);
                     }
                     break;
                 }
@@ -540,6 +542,7 @@ class PPM
     }
 
 
+    /** @return Player[] */
     public function getTransfers(TransferCondition $condition)
     {
         $params = [
@@ -658,6 +661,7 @@ class PPM
     }
 
 
+    /** @return Staff[] */
     public function getStaffTransfers(StaffTransferCondition $condition)
     {
         $params = [
