@@ -137,6 +137,11 @@ class HandballRouter extends Router
         return $this->getUrl('_action/action_person.php?action=add_market_person_offer&id=' . $player_id . '&type=player', false);
     }
 
+    public function getStaffBid($staff_id)
+    {
+        return $this->getUrl('_action/action_person.php?action=add_market_person_offer&type=employee&id=' . $staff_id . '&return_page=' . $this->getStaff($staff_id), false);
+    }
+
     public function scoutPlayer($player_id)
     {
         return $this->getUrl('_action/action_player.php?action=scouting_player&id=' . $player_id, false);
