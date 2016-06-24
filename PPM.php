@@ -305,7 +305,12 @@ class PPM
             if (strpos($page, 'disabled') !== false) {
                 $model->is_my_last_bid = true;
             }
+        }
 
+        if (preg_match("#<a class='link_name'(.+?)>#si", $page, $preg)) {
+            if (preg_match('#data\=(\d+)#si', $preg[1], $preg)) {
+                $model->team_id = $preg[1];
+            }
         }
 
         return $model;
@@ -677,8 +682,10 @@ class PPM
                         $player->career = (int)strip_tags($cells[($this->sport == self::SPORT_SOCCER ? 3 : 4)]);
 
                         for ($i = 0; $i < $player->getSkillsCount(); $i++) {
-                            $skill_cell = explode("<span class='kva'>", $cells[($this->sport == self::SPORT_SOCCER ? 4 : 5) + $i]);
-                            $player->setSkill($i, (int)$skill_cell[0], (int)$skill_cell[1]);
+                            $cell = $cells[($this->sport == self::SPORT_SOCCER ? 4 : 5) + $i];
+                            if(preg_match('#(\d+)<span.+?>(\d+)#si', $cell, $preg)) {
+                                $player->setSkill($i, (int)$preg[1], (int)$preg[2]);
+                            }
                         }
 
                         $player->experience = $cells[$player->getSkillsCount() + ($this->sport == self::SPORT_SOCCER ? 4 : 5)];
@@ -708,9 +715,14 @@ class PPM
         }
 
         if (isset($options['days_inactive'])) {
-            $days_inactive = $options['days_inactive'];
-            $result = array_filter($days_inactive, function ($player) use ($days_inactive) {
-                return true;
+            $days_inactive = (int)$options['days_inactive'];
+            $result = array_filter($result, function (Player $player) use ($days_inactive) {
+
+                $player = $this->getPlayer($player->id);
+                $team = $this->getTeam($player->team_id);
+                $user = $this->getUser($team->user_id);
+
+                return $user->getDaysInActive() >= $days_inactive;
             });
         }
 

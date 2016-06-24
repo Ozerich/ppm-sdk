@@ -11,6 +11,8 @@ abstract class Person
 
     public $id;
 
+    public $team_id;
+
     public $name;
 
     public $age;
