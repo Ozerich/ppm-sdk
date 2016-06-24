@@ -70,8 +70,18 @@ class BaseTransferCondition
 
 }
 
+
 class TransferCondition extends BaseTransferCondition
 {
+    const TYPE_ALL = 0;
+    const TYPE_TRANSFERS = 1;
+    const TYPE_SACKED = 2;
+    const TYPE_HCA = 3;
+    const TYPE_OFFERS = 4;
+
+    /** @var integer */
+    public $type;
+
     /** @var TransferRange */
     public $career;
 

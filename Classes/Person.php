@@ -4,6 +4,11 @@ namespace ppm;
 
 abstract class Person
 {
+    const MARKET_SELL = 1;
+    const MARKET_SACKED = 2;
+    const MARKET_HCA = 3;
+    const MARKET_OFFER = 4;
+
     public $id;
 
     public $name;
@@ -20,6 +25,7 @@ abstract class Person
 
     protected $skills = null;
 
+    public $market_type = self::MARKET_SELL;
 
     abstract function getSkillsCount();
 

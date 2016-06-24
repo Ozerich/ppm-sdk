@@ -543,14 +543,14 @@ class PPM
 
 
     /** @return Player[] */
-    public function getTransfers(TransferCondition $condition)
+    public function getTransfers(TransferCondition $condition, $options = [])
     {
         $params = [
             'action' => 'save_filter',
             'submit' => '',
             'name_filter' => '',
             'country' => 'first',
-            'market_type' => 1,
+            'market_type' => $condition->type,
         ];
 
         if ($condition->price && $condition->price->to) {
@@ -613,14 +613,28 @@ class PPM
                         preg_match('#\?data\=(\d+)#sui', $first_cell, $id);
                         $player->id = $id[1];
 
-                        if (preg_match("#value\='(\d+)'#sui", $first_cell, $seconds)) {
-                            $player->deadline_seconds = $seconds[1];
-                        } elseif (preg_match('#\d\d\d\d\-\d\d\-\d\d\s\d\d\:\d\d\:\d\d#sui', $first_cell, $time)) {
-                            $player->deadline_seconds = strtotime($time[0]) - time();
-                        }
+                        if (strpos($page, 'The player is for sale') !== false) {
+                            $player->market_type = Player::MARKET_OFFER;
+                            $player->deadline_seconds = null;
+                            if (preg_match("#id='offer_price' value='(\d+)'#si", $page, $preg)) {
+                                $player->sell_price = $preg[1];
+                            }
+                        } else {
 
-                        if (preg_match('#Price: (.+?)$#sui', $first_cell, $price)) {
-                            $player->sell_price = preg_replace('#[^\d]+#sui', '', $price[1]);
+                            if (strpos($page, 'IT IS NOT POSSIBLE TO SEE THE OFFERS') !== false) {
+                                $player->market_type = Player::MARKET_HCA;
+                            } elseif (strpos($page, '- no team -') !== false) {
+                                $player->market_type = Player::MARKET_SACKED;
+                            }
+
+                            if (preg_match("#value\='(\d+)'#sui", $first_cell, $seconds)) {
+                                $player->deadline_seconds = $seconds[1];
+                            } elseif (preg_match('#\d\d\d\d\-\d\d\-\d\d\s\d\d\:\d\d\:\d\d#sui', $first_cell, $time)) {
+                                $player->deadline_seconds = strtotime($time[0]) - time();
+                            }
+                            if (preg_match('#Price: (.+?)$#sui', $first_cell, $price)) {
+                                $player->sell_price = preg_replace('#[^\d]+#sui', '', $price[1]);
+                            }
                         }
 
                         $player->age = $cells[1];
@@ -655,6 +669,13 @@ class PPM
             } else {
                 break;
             }
+        }
+
+        if (isset($options['days_inactive'])) {
+            $days_inactive = $options['days_inactive'];
+            $result = array_filter($days_inactive, function ($player) use ($days_inactive) {
+                return true;
+            });
         }
 
         return $result;
