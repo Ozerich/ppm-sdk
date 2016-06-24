@@ -12,6 +12,8 @@ class Team
 
     public $league;
 
+    public $user_id;
+
 
     public function getUrl()
     {

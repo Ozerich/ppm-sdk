@@ -6,9 +6,9 @@ abstract class Router
 {
     abstract protected function getPrefix();
 
-    protected function getUrl($page, $use_lang = true)
+    protected function getUrl($page, $use_lang = true, $use_sport = true)
     {
-        return 'http://' . $this->getPrefix() . '.powerplaymanager.com/' . ($use_lang ? 'en/' : '') . $page;
+        return 'http://' . ($use_sport ? $this->getPrefix() : 'ppm') . '.powerplaymanager.com/' . ($use_lang ? 'en/' : '') . $page;
     }
 
     public function getHistoryScouting($p = null)
@@ -16,10 +16,16 @@ abstract class Router
         return $this->getUrl('scouting-history.html' . ($p ? '?data=' . $p : ''));
     }
 
+    public function getUser($id)
+    {
+        return $this->getUrl('manager-profile.html?data=' . $id, true, false);
+    }
+
     public function getPlayer($id)
     {
         return $this->getUrl('player.html?data=' . $id);
     }
+
 
     public function getStaff($id)
     {

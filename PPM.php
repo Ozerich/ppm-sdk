@@ -8,6 +8,7 @@ require_once "Classes/router.php";
 require_once "Classes/position.php";
 require_once "Classes/team.php";
 require_once "Classes/person.php";
+require_once "Classes/user.php";
 require_once "Classes/player.php";
 require_once "Classes/staff.php";
 require_once "Classes/factory.php";
@@ -175,6 +176,41 @@ class PPM
         }
 
         return isset($this->national_team_teamwork_data[$player_id]) ? $this->national_team_teamwork_data[$player_id] : false;
+    }
+
+    public function getUser($user_id)
+    {
+        $page_url = $this->factory->getRouter()->getUser($user_id);
+        $page = $this->downloader->get($page_url);
+
+        preg_match_all("#<table class='table_profile'(.+?)</table>#si", $page, $tables, PREG_SET_ORDER);
+        $table = $tables[1][1];
+
+        preg_match('#<td.+?>(.+?)</td>#si', $table, $data);
+        $last_login = $data[1];
+
+        $user = new User;
+
+        $user->id = $user_id;
+        $user->last_login = $last_login;
+
+        return $user;
+    }
+
+    public function getTeam($team_id)
+    {
+        $page_url = $this->factory->getRouter()->getTeam($team_id);
+        $page = $this->downloader->get($page_url);
+
+        preg_match_all('#h1_add_info.+?>(.+?)</div>#si', $page, $items, PREG_SET_ORDER);
+        preg_match('#\?data\=(\d+)\-#si', $items[2][1], $user_id);
+        $user_id = $user_id[1];
+
+        $model = new Team;
+
+        $model->user_id = $user_id;
+
+        return $model;
     }
 
     /** @return Player */
@@ -550,7 +586,7 @@ class PPM
             'submit' => '',
             'name_filter' => '',
             'country' => 'first',
-            'market_type' => 1,
+            'market_type' => 3,
         ];
 
         if ($condition->price && $condition->price->to) {
