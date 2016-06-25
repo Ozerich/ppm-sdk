@@ -46,6 +46,8 @@ class PPM
     private $login;
     private $password;
 
+    private $authed = false;
+
     public function __construct()
     {
         set_time_limit(0);
@@ -53,6 +55,12 @@ class PPM
         $this->downloader = new Downloader();
 
         $this->setLogger(new Logger());
+    }
+
+    public function setCredentials($login, $password)
+    {
+        $this->login = $login;
+        $this->password = $password;
     }
 
     public function getDownloader()
@@ -94,11 +102,13 @@ class PPM
         ], true);
 
         if (strpos($response, 'Login to PPM')) {
+            $this->authed = false;
             $this->logger->write('FAIL');
             return false;
         }
 
         $this->logger->write('OK');
+        $this->authed = true;
         return true;
     }
 
@@ -199,11 +209,19 @@ class PPM
 
     public function getTeam($team_id)
     {
+        if (!$this->authed) {
+            $this->reauth();
+        }
+
         $page_url = $this->factory->getRouter()->getTeam($team_id);
         $page = $this->downloader->get($page_url);
 
-        preg_match_all('#h1_add_info.+?>(.+?)</div>#si', $page, $items, PREG_SET_ORDER);
-        preg_match('#\?data\=(\d+)\-#si', $items[2][1], $user_id);
+        if (!preg_match_all('#h1_add_info.+?>(.+?)</div>#si', $page, $items, PREG_SET_ORDER)) {
+            return null;
+        }
+        if (!preg_match('#\?data\=(\d+)\-#si', $items[2][1], $user_id)) {
+            return null;
+        }
         $user_id = $user_id[1];
 
         $model = new Team;
@@ -216,6 +234,10 @@ class PPM
     /** @return Player */
     public function getPlayer($player_id)
     {
+        if (!$this->authed) {
+            $this->reauth();
+        }
+        
         $page_url = $this->factory->getRouter()->getPlayer($player_id);
         $page = $this->downloader->get($page_url);
 
@@ -243,7 +265,7 @@ class PPM
             $skills_data = $skills[1];
             if (preg_match_all('#<span.*?>(.+?)</span>.*?<span.*?>(.+?)</span>#si', $skills_data, $skills, PREG_SET_ORDER)) {
                 foreach ($skills as $ind => $skill) {
-                    if (strpos($skill[1], '(') !== false) {
+                    if (strpos($skill[1], '(') !== false || $skill[1] == 'OR') {
                         break;
                     }
                     $model->setSkill($ind, strip_tags($skill[1]), strip_tags($skill[2]));
@@ -683,7 +705,7 @@ class PPM
 
                         for ($i = 0; $i < $player->getSkillsCount(); $i++) {
                             $cell = $cells[($this->sport == self::SPORT_SOCCER ? 4 : 5) + $i];
-                            if(preg_match('#(\d+)<span.+?>(\d+)#si', $cell, $preg)) {
+                            if (preg_match('#(\d+)<span.+?>(\d+)#si', $cell, $preg)) {
                                 $player->setSkill($i, (int)$preg[1], (int)$preg[2]);
                             }
                         }
@@ -720,9 +742,14 @@ class PPM
 
                 $player = $this->getPlayer($player->id);
                 $team = $this->getTeam($player->team_id);
-                $user = $this->getUser($team->user_id);
 
-                return $user->getDaysInActive() >= $days_inactive;
+                if ($team) {
+                    $user = $this->getUser($team->user_id);
+                    return $user->getDaysInActive() >= $days_inactive;
+                } else {
+                    return true;
+                }
+
             });
         }
 
