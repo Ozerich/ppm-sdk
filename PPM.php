@@ -237,7 +237,7 @@ class PPM
         if (!$this->authed) {
             $this->reauth();
         }
-        
+
         $page_url = $this->factory->getRouter()->getPlayer($player_id);
         $page = $this->downloader->get($page_url);
 
@@ -617,7 +617,9 @@ class PPM
         ];
 
         if ($condition->price && $condition->price->to) {
-            $params['price_to'] = (int)$condition->price->to;
+			if($condition->type == TransferCondition::TYPE_TRANSFERS){
+				$params['price_to'] = (int)$condition->price->to;
+			}
         }
 
         if ($condition->por) {
@@ -648,7 +650,6 @@ class PPM
         }
 
         $result = [];
-
         $search_id = null;
         for ($page = 1; $page <= 50; $page++) {
 
@@ -675,30 +676,24 @@ class PPM
 
                         preg_match('#\?data\=(\d+)#sui', $first_cell, $id);
                         $player->id = $id[1];
-
-                        if (strpos($page, 'The player is for sale') !== false) {
-                            $player->market_type = Player::MARKET_OFFER;
-                            $player->deadline_seconds = null;
-                            if (preg_match("#id='offer_price' value='(\d+)'#si", $page, $preg)) {
-                                $player->sell_price = $preg[1];
-                            }
-                        } else {
-
-                            if (strpos($page, 'IT IS NOT POSSIBLE TO SEE THE OFFERS') !== false) {
-                                $player->market_type = Player::MARKET_HCA;
-                            } elseif (strpos($page, '- no team -') !== false) {
-                                $player->market_type = Player::MARKET_SACKED;
-                            }
-
+						
+						if(strpos($row, 'FFE3EA') !== false){
+							$player->market_type = Player::MARKET_HCA;
+						}
+						else{
                             if (preg_match("#value\='(\d+)'#sui", $first_cell, $seconds)) {
                                 $player->deadline_seconds = $seconds[1];
                             } elseif (preg_match('#\d\d\d\d\-\d\d\-\d\d\s\d\d\:\d\d\:\d\d#sui', $first_cell, $time)) {
                                 $player->deadline_seconds = strtotime($time[0]) - time();
                             }
+						}
+						
+						if($player->market_type != Player::MARKET_HCA){
                             if (preg_match('#Price: (.+?)$#sui', $first_cell, $price)) {
                                 $player->sell_price = preg_replace('#[^\d]+#sui', '', $price[1]);
                             }
-                        }
+						}
+
 
                         $player->age = $cells[1];
                         $player->career = (int)strip_tags($cells[($this->sport == self::SPORT_SOCCER ? 3 : 4)]);
@@ -735,22 +730,37 @@ class PPM
                 break;
             }
         }
+		
+		
+		if ($condition->price && $condition->price->to && $condition->type != TransferCondition::TYPE_HCA) {
+			$price_to = $condition->price->to;
+			$result = array_filter($result, function(Player $player) use ($price_to){
+				if ($player->market_type == Person::MARKET_HCA) {
+                    return true;
+                }
+				return $player->sell_price <= $price_to;
+			});
+		}
 
         if (isset($options['days_inactive'])) {
             $days_inactive = (int)$options['days_inactive'];
-            $result = array_filter($result, function (Player $player) use ($days_inactive) {
+            if ($days_inactive > 0) {
+                $result = array_filter($result, function (Player $player) use ($days_inactive) {
+                    if ($player->market_type != Person::MARKET_HCA) {
+                        return true;
+                    }
 
-                $player = $this->getPlayer($player->id);
-                $team = $this->getTeam($player->team_id);
+                    $player = $this->getPlayer($player->id);
+                    $team = $this->getTeam($player->team_id);
 
-                if ($team) {
-                    $user = $this->getUser($team->user_id);
-                    return $user->getDaysInActive() >= $days_inactive;
-                } else {
-                    return true;
-                }
-
-            });
+                    if ($team) {
+                        $user = $this->getUser($team->user_id);
+                        return $user->getDaysInActive() >= $days_inactive;
+                    } else {
+                        return true;
+                    }
+                });
+            }
         }
 
         return $result;
