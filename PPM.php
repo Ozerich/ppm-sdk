@@ -177,7 +177,7 @@ class PPM
             $page_url = $this->factory->getRouter()->getNationalTeamRoster();
             $page = $this->downloader->get($page_url);
 
-            if (preg_match_all("#<tr>.+?<a href.+?data=(\d+).+?<td>\&nbsp;(\d+)</td>#si", $page, $list, PREG_SET_ORDER)) {
+            if (preg_match_all("#<tr.*?>.+?<a href.+?data=(\d+).+?<td>\&nbsp;(\d+)</td>#si", $page, $list, PREG_SET_ORDER)) {
                 foreach ($list as $item) {
                     $this->national_team_teamwork_data[$item[1]] = $item[2];
                 }
